@@ -1,0 +1,74 @@
+﻿@model FormulaUtility.Mvc.Models.FormulaDetailViewModel
+@{
+    ViewBag.Title = "Formula Management";
+}
+
+@section scripts {
+    <script>
+        $("#searchForm").submit(function () {
+            var val = $.trim($("input[name='SearchText']").val());
+            $("input[name='SearchText']").val(val);
+        });
+    </script>
+}
+
+<div class="container-fluid p-0">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-semibold">
+            <i class="fa fa-list text-primary me-2"></i>
+            Formula Management
+        </h5>
+
+        <a href="@Url.Action("Create")" class="btn btn-primary btn-sm">
+            <i class="fa fa-plus-circle me-1"></i> Add New Formula
+        </a>
+    </div>
+
+    <!-- Search Card -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+
+            @using (Ajax.BeginForm("Search", "Formula",
+    new AjaxOptions
+    {
+        UpdateTargetId = "grid",
+        InsertionMode = InsertionMode.Replace,
+        HttpMethod = "POST"
+    },
+    new { @class = "row g-2 align-items-center", id = "searchForm" }))
+            {
+                <div class="col-md-3">
+                    @Html.TextBoxFor(m => m.SearchText, new
+                    {
+                        @class = "form-control form-control-sm",
+                        placeholder = "Search by Formula Name",
+                        AutoComplete = "off",
+                    })
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fa fa-search"></i>
+                    </button>
+
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa fa-rotate-left"></i>
+                    </a>
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <!-- Grid Card -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div id="grid">
+                @Html.Partial("_SearchGrid", Model)
+            </div>
+        </div>
+    </div>
+
+</div>

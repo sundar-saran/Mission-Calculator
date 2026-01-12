@@ -1,0 +1,14 @@
+{
+  "version": "3.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "codemirror@6.65.7",
+      "destination": "Scripts/codemirror/",
+      "files": [
+        "codemirror.js",
+        "mode/javascript/javascript.js"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,697 @@
+﻿@model FormulaUtility.Mvc.Models.FormulaCreateViewModel
+@{
+    ViewBag.Title = "Edit Formula";
+}
+
+<div class="card-body">
+
+    @using (Html.BeginForm("Edit", "Formula", FormMethod.Post))
+    {
+        @Html.HiddenFor(m => m.FormulaId)
+
+        <!-- Formula Name -->
+        <div class="form-group mb-3">
+            <strong>Formula Name</strong>
+            @Html.TextBoxFor(m => m.FormulaName,
+                new { @class = "form-control", placeholder = "Enter formula name", AutoComplete = "off", })
+        </div>
+
+        <div class="row">
+            <!-- Formula Body -->
+            <div class="col-md-9">
+                <div class="card shadow-sm mb-3 formula-card">
+
+                    <!-- Header -->
+                    <div class="card-header d-flex justify-content-between align-items-center formula-toolbar">
+                        <strong>Formula Editor</strong>
+                        <small>
+                            <button type="button"
+                                    onclick="formatFormulaClick()">
+                                Format
+                            </button>
+
+                            <button type="button"
+                                    id="btnReplaceAll"
+                                    onclick="openReplaceModal(selectedInvalidWord)">
+                                Replace All
+                            </button>
+
+                        </small>
+                    </div>
+
+                    <!-- OPERATOR TOOLBAR -->
+                    <div class="formula-toolbar">
+
+                        <!-- Arithmetic -->
+                        <div class="toolbar-group">
+                            <strong><span class="toolbar-label">Arithmetic Operator :</span></strong>
+                            <button type="button" class="ao" data-op="+" onclick="addText('+')">+</button>
+                            <button type="button" class="ao" data-op="-" onclick="addText('-')">−</button>
+                            <button type="button" class="ao" data-op="*" onclick="addText('*')">×</button>
+                            <button type="button" class="ao" data-op="/" onclick="addText('/')">÷</button>
+                            <button type="button" class="ao" data-op="(" onclick="addFunctionWithCursor('()',1)">(</button>
+                            <button type="button" class="ao" data-op=")" onclick="addText(')')">)</button>
+                            <button type="button" class="ao" data-op="{" onclick="addFunctionWithCursor('{}',1)">{</button>
+                            <button type="button" class="ao" data-op="}" onclick="addText('}')">}</button>
+                            <button type="button" class="ao" data-op="[" onclick="addFunctionWithCursor('[]',1)">[</button>
+                            <button type="button" class="ao" data-op="]" onclick="addText(']')">]</button>
+                        </div>
+
+                        <!-- Comparison -->
+                        <div class="toolbar-group">
+                            <button type="button" class="ao" data-op="<" onclick="addText('<')">&lt;</button>
+                            <button type="button" class="ao" data-op=">" onclick="addText('>')">&gt;</button>
+                            <button type="button" class="ao" data-op="<=" onclick="addText('<=')">&le;</button>
+                            <button type="button" class="ao" data-op=">=" onclick="addText('>=')">&ge;</button>
+                            <button type="button" class="ao" data-op="==" onclick="addText('==')">==</button>
+                        </div>
+
+                        <!-- Logical -->
+                        <div class="toolbar-group">
+                            <button type="button" class="ao" data-op="&&" onclick="addText('&&')">&&</button>
+                            <button type="button" class="ao" data-op="||" onclick="addText('||')">||</button>
+                            <button type="button" class="ao" data-op="?" onclick="addText('?')">?</button>
+                            <button type="button" class="ao" data-op=":" onclick="addText(':')">:</button>
+                        </div>
+
+                        <!-- CASE -->
+                        <div class="toolbar-group">
+                            <strong><span class="toolbar-label"> Logical Operator :</span></strong>
+                            <button type="button" class="kw" data-op="CASE" onclick="addText('CASE')">CASE</button>
+                            <button type="button" class="kw" data-op="WHEN" onclick="addText('WHEN')">WHEN</button>
+                            <button type="button" class="kw" data-op="THEN" onclick="addText('THEN')">THEN</button>
+                            <button type="button" class="kw" data-op="ELSE" onclick="addText('ELSE')">ELSE</button>
+                            <button type="button" class="kw" data-op="END" onclick="addText('END')">END</button>
+                        </div>
+
+                        <!-- Functions -->
+                        <div class="toolbar-group">
+                            <button type="button" class="fn" data-op="Math.Min(,)" onclick="addFunctionWithCursor('Math.Min(,)',2)">Min</button>
+                            <button type="button" class="fn" data-op="Math.Max(,)" onclick="addFunctionWithCursor('Math.Max(,)',2)">Max</button>
+                        </div>
+
+                        <!-- Boolean -->
+                        <div class="toolbar-group">
+                            <button type="button" class="bo" data-op="true" onclick="addText('true')">true</button>
+                            <button type="button" class="bo" data-op="false" onclick="addText('false')">false</button>
+                        </div>
+
+                    </div>
+
+                    <!-- EDITOR -->
+                    <div class="card-body p-0">
+                        @Html.TextAreaFor(m => m.FormulaDefinition, new
+                        {
+                            id = "txtFormula",
+                            placeholder = "CASE WHEN BASIC > 10000 THEN BASIC * 0.10 ELSE 0 END"
+                        })
+                    </div>
+
+                    <div class="col-md-12 card-footer bg-light small text-muted formula-toolbar">
+                        <div class="col-md-9">
+                            <small>
+
+                                <button type="button" id="btnUndo" onclick="undoFormula()">
+                                    <i class="fa fa-undo"></i>
+                                </button>
+
+                                <button type="button" id="btnRedo" onclick="redoFormula()">
+                                    <i class="fa fa-redo"></i>
+                                </button>
+                            </small>
+
+                            Tip: Use toolbar or type directly
+                        </div>
+                        <div class="col-md-1 toolbar-group" style="margin-left: 45px">
+                            <button type="button"
+                                    id="btnValidate"
+                                    class="va btn-outline-primary me-2"
+                                    onclick="validateFormula()">
+                                Validate
+                            </button>
+
+
+                            <button type="button" id="btntest"
+                                    class="va btn-outline-success me-2"
+                                    onclick="openTestFormula()" disabled>
+                                Test/Run
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Value Selection -->
+            <div class="col-md-3">
+                <div class="card shadow-sm mb-3 formula-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Value Selection</strong>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row align-items-end">
+                            <div class="col-md-8">
+                                <label>Element</label>
+                                @Html.DropDownListFor(m => m.SelectedElement,
+                                    Model.ElementList, "-- Select --",
+                                    new { @class = "form-control", id = "ddlElement" })
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-success" onclick="addElement()">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row align-items-end mt-3">
+                            <div class="col-md-8">
+                                <label>Constant</label>
+                                @Html.TextBoxFor(m => m.ConstantValue,
+                                    new { @class = "form-control", id = "txtConst", placeholder = "Enter constant", AutoComplete = "off", })
+                            </div>
+
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-success" onclick="addconstant()">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="card-footer bg-light small text-muted">
+                        Tip: Use Element, Constant and Bool or type directly
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="text-end mt-4">
+            <button type="submit"
+                    id="btnSave"
+                    class="btn btn-primary me-2"
+                    disabled>
+                Save
+            </button>
+
+            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    }
+</div>
+
+
+<!-- Test Formula Model-->
+<div class="modal fade" id="testFormulaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Test Formula</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="testInputs"></div>
+
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="runFormulaTest()">
+                        Run
+                    </button>
+
+                </div>
+
+                <div class="mt-3 alert alert-info d-none" id="testResult"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Replace All Model-->
+<div class="modal fade" id="replaceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Replace Invalid Element</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- REPLACE MODE -->
+                <div class="mb-3">
+                    <label class="fw-semibold">Replace Mode</label>
+                    <select id="replaceMode" class="form-control" onchange="onReplaceModeChange()">
+                        <option value="">-- Select Mode --</option>
+                        <option value="invalid">Invalid Element</option>
+                        <option value="custom">Replace To Another</option>
+                    </select>
+                </div>
+
+                <!-- INVALID ELEMENT (only for invalid mode) -->
+                <div class="mb-3" id="invalidElementContainer" style="display:none">
+                    <label class="fw-semibold">Invalid Element</label>
+                    <select id="invalidElementSelect" class="form-control"></select>
+                </div>
+
+                <!-- CUSTOM TARGET -->
+                <div class="mb-3" id="customTargetContainer" style="display:none">
+                    <label class="fw-semibold">Value to Replace</label>
+                    <input type="text"
+                           id="customReplaceTarget"
+                           class="form-control"
+                           placeholder="Enter exact value (case-sensitive)">
+                </div>
+
+
+                <!-- REPLACEMENT TYPE -->
+                <div class="mb-3">
+                    <label class="fw-semibold">Replace With</label>
+                    <select id="replaceType" class="form-control" onchange="onReplaceTypeChange()">
+                        <option value="">-- Select Type --</option>
+                        <option value="element">Element</option>
+                        <option value="bool">Boolean</option>
+                        <option value="constant">Constant</option>
+                    </select>
+                </div>
+
+                <!-- DYNAMIC INPUT -->
+                <div class="mb-3" id="replaceValueContainer"></div>
+
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                <button type="button" class="btn btn-primary" onclick="replaceAllInvalid()" data-bs-dismiss="modal">Replace All</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        const elementMap = {};
+
+        let formulaEditor;
+        let selectedInvalidWord = null;
+
+        const elementTypeMap = {
+            B: "boolean",
+            HRA: "number",
+            SP: "number",
+            MC: "number",
+            CON: "number",
+            PF: "number",
+            ESIC: "boolean"
+        };
+
+        function flashOperator(op) {
+
+            const map = {
+                "+": "+",
+                "-": "-",
+                "*": "*",
+                "/": "/",
+                "?": "?",
+                ":": ":",
+
+                "<": "<",
+                ">": ">",
+
+                "(": "(",
+                ")": ")",
+                "{": "{",
+                "}": "}",
+                "[": "[",
+                "]": "]",
+
+                "<=": "<=",
+                ">=": ">=",
+                "==": "==",
+                "&&": "&&",
+                "||": "||"
+            };
+
+            const normalized = map[op] || op;
+
+            const btn = document.querySelector(
+                `.formula-toolbar button[data-op="${normalized}"]`
+            );
+
+            if (!btn) return;
+
+            // restart animation cleanly
+            btn.classList.remove("operator-flash");
+            void btn.offsetWidth;
+            btn.classList.add("operator-flash");
+
+            setTimeout(() => {
+                btn.classList.remove("operator-flash");
+            }, 350);
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const elements = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                Model.ElementList
+                    .Where(x => !string.IsNullOrEmpty(x.Value))
+                    .Select(x => new { text = x.Text, value = x.Value })
+            ));
+
+
+            const bools = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                Model.BoolList.Select(x => x.Value)));
+
+            elements.forEach(e => {
+                elementMap[e.value.toUpperCase()] = e.text;
+            });
+
+            formulaEditor = CodeMirror.fromTextArea(
+                document.getElementById("txtFormula"),
+                {
+                    mode: "javascript",
+                    theme: "default",
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    historyEventDelay: 300,
+                    indentUnit: 4,
+                    autofocus: true,
+                    autoCloseBrackets: true,
+                    matchBrackets: true,
+                    styleActiveLine: true,
+                    currentWord: true,
+
+                    highlightSelectionMatches: {
+                        showToken: true,
+                        annotateScrollbar: true
+                    },
+
+                    extraKeys: {
+                        "Ctrl-Z": cm => cm.undo(),
+                        "Ctrl-Y": cm => cm.redo(),
+                        "Ctrl-Shift-Z": cm => cm.redo(),
+                        "Ctrl-Space": "autocomplete",
+                        "Backspace": function (cm) {
+
+                            const doc = cm.getDoc();
+                            const cursor = doc.getCursor();
+
+                            if (cursor.ch === 0) {
+                                cm.execCommand("delCharBefore");
+                                return;
+                            }
+
+                            const token = cm.getTokenAt(cursor);
+
+                            if (token && token.string.trim() !== "") {
+
+                                const tokenText = token.string;
+                                const isNumber = !isNaN(tokenText);
+
+                                if (!isNumber && cursor.ch === token.end) {
+
+                                    const tokenStart = { line: cursor.line, ch: token.start };
+                                    const tokenEnd = { line: cursor.line, ch: token.end };
+
+                                    doc.replaceRange("", tokenStart, tokenEnd);
+                                    invalidateFormula();
+                                    updateUndoRedoButtons();
+                                    return;
+                                }
+                            }
+
+                            const line = doc.getLine(cursor.line);
+                            const before = line.slice(0, cursor.ch);
+
+                            const multiOps = ["&&", "||", ">=", "<=", "==", "!=", "?:"];
+
+                            for (let op of multiOps) {
+                                if (before.endsWith(op)) {
+                                    doc.replaceRange(
+                                        "",
+                                        { line: cursor.line, ch: cursor.ch - op.length },
+                                        cursor
+                                    );
+                                    invalidateFormula();
+                                    updateUndoRedoButtons();
+                                    return;
+                                }
+                            }
+
+                            cm.execCommand("delCharBefore");
+                        }
+                    }
+                }
+            );
+
+            let currentMarked = [];
+
+            function clearHighlights(cm) {
+                currentMarked.forEach(m => m.clear());
+                currentMarked = [];
+            }
+
+            formulaEditor.on("cursorActivity", function (cm) {
+                clearHighlights(cm);
+
+                const cursor = cm.getCursor();
+                const token = cm.getTokenAt(cursor);
+
+                // Ignore spaces, operators, numbers
+                if (!token.string || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(token.string)) {
+                    return;
+                }
+
+                const word = token.string;
+                const cursorLine = cursor.line;
+
+                cm.eachLine(function (lineHandle) {
+                    const lineNo = cm.getLineNumber(lineHandle);
+                    let match;
+
+                    const regex = new RegExp("\\b" + word + "\\b", "g");
+                    while ((match = regex.exec(lineHandle.text)) !== null) {
+                        const from = { line: lineNo, ch: match.index };
+                        const to = { line: lineNo, ch: match.index + word.length };
+
+                        const mark = cm.markText(from, to, {
+                            className: "cm-matchhighlight"
+                        });
+
+                        currentMarked.push(mark);
+                    }
+                });
+            });
+
+
+            // Custom autocomplete
+            CodeMirror.registerHelper("hint", "formulaHint", function (editor) {
+
+                const cursor = editor.getCursor();
+                const token = editor.getTokenAt(cursor);
+                const start = token.start;
+                const end = cursor.ch;
+                const currentWord = token.string || "";
+
+                const elementHints = elements
+                    .filter(e => e.text.toLowerCase().startsWith(currentWord.toLowerCase()))
+                    .map(e => ({
+                        text: e.value,
+                        displayText: e.text
+                    }));
+
+                //const boolHints = bools
+                //    .filter(b => b.toLowerCase().startsWith(currentWord.toLowerCase()))
+                //    .map(b => ({
+                //        text: b,
+                //        displayText: b
+                //    }));
+
+                return {
+                    list: [...elementHints], // ...boolHints - for bools hints
+                    from: CodeMirror.Pos(cursor.line, start),
+                    to: CodeMirror.Pos(cursor.line, end)
+                };
+            });
+
+            // Trigger autocomplete while typing
+            formulaEditor.on("inputRead", function (cm, change) {
+                if (change.text[0].match(/[A-Za-z_.]/)) {
+                    cm.showHint({
+                        hint: CodeMirror.hint.formulaHint,
+                        completeSingle: false
+                    });
+                }
+            });
+
+            formulaEditor.on("beforeChange", function (cm, change) {
+
+                if (change.origin !== "paste") return;
+
+                const pastedText = change.text.join(" ");
+                const formatted = formatFormula(pastedText);
+
+                change.update(change.from, change.to, [formatted]);
+
+            });
+
+            formulaEditor.on("change", function (cm, change) {
+
+                invalidateFormula();
+                updateUndoRedoButtons();
+                if (isFormatted) {
+                    isFormatted = false;
+                }
+
+                highlightInvalidElements(cm);
+            });
+
+            formulaEditor.on("inputRead", function (cm, change) {
+
+                if (!change.text || !change.text[0]) return;
+
+                const insertedChar = change.text[0];
+
+                const cursor = cm.getCursor();
+                const recent = cm.getRange(
+                    { line: cursor.line, ch: Math.max(0, cursor.ch - 3) },
+                    cursor
+                );
+
+                const multiOps = ["<=", ">=", "==", "&&", "||"];
+
+                for (let op of multiOps) {
+                    if (recent.endsWith(op)) {
+                        flashOperator(op);
+                        return;
+                    }
+                }
+
+                if (insertedChar === "(") {
+                    flashOperator("(");
+                    return;
+                }
+                if (insertedChar === "{") {
+                    flashOperator("{");
+                    return;
+                }
+                if (insertedChar === "[") {
+                    flashOperator("[");
+                    return;
+                }
+
+                if (/[+\-*/?:<>)\}\]]/.test(insertedChar)) {
+                    flashOperator(insertedChar);
+                }
+            });
+
+            // highlight Invalid Elements
+            let invalidMarks = [];
+
+            function clearInvalidMarks() {
+                invalidMarks.forEach(m => m.clear());
+                invalidMarks = [];
+            }
+
+            function highlightInvalidElements(cm) {
+
+                clearInvalidMarks();
+                invalidTokenSet.clear();
+
+                const allowedElements = new Set(
+                    elements.map(e => e.value.toUpperCase())
+                );
+
+                const allowedBools = new Set(
+                    bools.map(b => b.toUpperCase())
+                );
+
+                const reserved = new Set([
+                    "CASE", "WHEN", "THEN", "ELSE", "END",
+                    "IF", "TRUE", "FALSE",
+                    "MATH", "MIN", "MAX"
+                ]);
+
+                cm.eachLine(function (lineHandle) {
+                    const lineNo = cm.getLineNumber(lineHandle);
+                    const text = lineHandle.text;
+
+                    const tokens = text.match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || [];
+
+                    tokens.forEach(word => {
+
+                        const key = word.toUpperCase();
+
+                        if (reserved.has(key)) return;
+                        if (allowedElements.has(key)) return;
+                        if (allowedBools.has(key)) return;
+                        if (!isNaN(word)) return;
+
+                        invalidTokenSet.add(word);
+
+                        const regex = new RegExp("\\b" + word + "\\b", "g");
+                        let match;
+
+                        while ((match = regex.exec(text)) !== null) {
+
+                            const from = { line: lineNo, ch: match.index };
+                            const to = { line: lineNo, ch: match.index + word.length };
+
+                            const mark = cm.markText(from, to, {
+                                className: "cm-invalid-element"
+                            });
+
+                            mark.on("mousedown", function () {
+                                setSelectedInvalidWord(word);
+                            });
+
+                            invalidMarks.push(mark);
+                        }
+                    });
+                });
+
+            }
+            enableReplaceAll();
+
+        });
+
+        function getFormulaBox() {
+            return formulaEditor;
+        }
+        document.querySelector("form").addEventListener("submit", function (e) {
+
+            e.preventDefault();
+
+            if (!formulaEditor) return;
+
+            let formula = formulaEditor.getValue().trim();
+
+            if (!formula) {
+                alert("Formula is empty");
+                return;
+            }
+
+            const formatted = formatFormula(formula);
+            if (formula !== formatted) {
+                alert("Please format your formula first");
+                return;
+            }
+            formulaEditor.setValue(formatted);
+
+            const isFormat = setInterval(() => {
+                if (formatted) {
+                    clearInterval(isFormat);
+                    e.target.submit();
+                }
+            }, 100);
+        });
+
+    </script>
+}

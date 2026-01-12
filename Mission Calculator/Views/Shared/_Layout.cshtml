@@ -1,0 +1,1069 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title - Mission Calculator</title>
+
+    <!-- Bootstrap & Site CSS -->
+    @Styles.Render("~/Content/css")
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+
+    <link href="~/Scripts/codemirror/codemirror.css" rel="stylesheet" />
+    <link href="~/Scripts/codemirror/addon/hint/show-hint.css" rel="stylesheet" />
+
+
+    <script src="~/Scripts/codemirror/codemirror.js"></script>
+    <script src="~/Scripts/codemirror/mode/javascript/javascript.js"></script>
+    <script src="~/Scripts/codemirror/addon/display/placeholder.js"></script>
+
+    @Scripts.Render("~/bundles/modernizr")
+
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            height: 100vh;
+            background-color: #1f2937;
+            color: #fff;
+            position: fixed;
+            width: 240px;
+            top: 0;
+            left: 0;
+        }
+
+            .sidebar a {
+                color: #cbd5e1;
+                padding: 12px 20px;
+                display: block;
+                text-decoration: none;
+            }
+
+                .sidebar a:hover {
+                    background-color: #374151;
+                    color: #fff;
+                }
+
+            .sidebar .brand {
+                font-size: 18px;
+                font-weight: 600;
+                padding: 15px 20px;
+                background-color: #111827;
+            }
+
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 240px;
+            right: 0;
+            height: 58px;
+            background-color: #1f2937;
+            color: #fff;
+            padding: 0 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+            .top-navbar .page-title {
+                font-size: 16px;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+            }
+
+                .top-navbar .page-title i {
+                    margin-right: 8px;
+                    color: #60a5fa;
+                }
+
+        .content-wrapper {
+            margin-left: 240px;
+            padding: 20px;
+            padding-top: 75px;
+
+        }
+
+        /* Footer */
+        .footer {
+            padding: 10px;
+            font-size: 13px;
+            color: #6c757d;
+            text-align: center;
+        }
+
+        .formula-editor {
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            background-color: #f8f9fa;
+            padding: 14px;
+            resize: none;
+            line-height: 1.6;
+            max-width: none;
+        }
+
+        .card.h-100 {
+            height: 100%;
+        }
+
+        .card-body {
+            flex: 1 1 auto;
+        }
+
+        .formula-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #fafafa;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            margin-right: 8px;
+        }
+
+        .formula-toolbar button {
+            border: 1px solid #ced4da;
+            background: white;
+            padding: 4px 8px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .formula-toolbar button:hover {
+                background: #e9ecef;
+            }
+
+     /*   .formula-toolbar .ao {
+            background: #ff00f2;
+            border-color: #90caf9;
+        }*/
+
+        .formula-toolbar .kw {
+            background: #e7f3ff;
+            border-color: #90caf9;
+        }
+
+        .formula-toolbar .fn {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+        }
+
+
+       /* .formula-toolbar .bo {
+            background: #002eff;
+            border-color: #002eff;
+        }*/
+
+        .formula-toolbar .va {
+            background: #a5c2c8;
+            border-color: #90caf9;
+        }
+
+        .formula-toolbar .test {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+        }
+
+
+        .operator-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+
+            .operator-grid .btn {
+                height: 42px;
+                font-weight: 600;
+                padding: 0;
+            }
+
+
+        .formula-card {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+            .formula-card .card-body {
+                flex: 1;
+                overflow: hidden;
+                padding: 0;
+            }
+
+            .formula-card .CodeMirror {
+                height: 100% !important;
+            }
+
+
+
+        .CodeMirror {
+            height:100%;
+            font-family: Consolas, monospace;
+            font-size: 14px;
+            background: #f8fafc;
+        }
+
+        .card-body .CodeMirror {
+            width: 100%;
+        }
+
+        .cm-matchhighlight {
+            background-color: #fde68a;
+            border-radius: 2px;
+        }
+
+        .cm-current-word {
+            background-color: #bbf7d0;
+        }
+
+        .cm-invalid-element {
+            color: #dc2626 !important;
+            background-color: #fee2e2; 
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
+       
+
+
+    </style>
+
+
+    <script>
+        let isFormatted = false;
+        let invalidTokenSet = new Set();
+        let isFormulaValidated = false;
+        let lastValidatedFormula = "";
+
+        function undoFormula() {
+            if (!formulaEditor) return;
+            formulaEditor.undo();
+            invalidateFormula();
+        }
+
+        function redoFormula() {
+            if (!formulaEditor) return;
+            formulaEditor.redo();
+            invalidateFormula();
+        }
+
+        function updateUndoRedoButtons() {
+            if (!formulaEditor) return;
+
+            const history = formulaEditor.historySize();
+
+            document.getElementById("btnUndo").disabled = history.undo === 0;
+            document.getElementById("btnRedo").disabled = history.redo === 0;
+        }
+
+        function setSelectedInvalidWord(word) {
+            selectedInvalidWord = word;
+        }
+
+        function getSaveButton() {
+            return document.getElementById("btnSave");
+        }
+
+        function getTestButton() {
+            return document.getElementById("btntest");
+        }
+
+        function invalidateFormula() {
+            isFormulaValidated = false;
+
+            const btnSave = getSaveButton();
+            const btnTest = getTestButton();
+
+            if (btnSave) btnSave.disabled = true;
+            if (btnTest) btnTest.disabled = true;
+        }
+
+        function formatFormulaClick() {
+
+            if (!formulaEditor) return;
+
+            let formula = formulaEditor.getValue().trim();
+
+            if (!formula) {
+                alert("Formula is empty");
+                return;
+            }
+
+            const formatted = formatFormula(formula);
+
+            formulaEditor.setValue(formatted);
+
+            lastFormattedFormula = formatted;
+
+            isFormatted = true;
+
+            const btnValidate = document.getElementById("btnValidate");
+        }
+
+        // Insert text at cursor position
+        function addText(text) {
+            if (!formulaEditor) return;
+
+            formulaEditor.focus();
+
+            const doc = formulaEditor.getDoc();
+            const cursor = doc.getCursor();
+
+            doc.replaceRange(text + " ", cursor);
+
+            invalidateFormula();
+            updateUndoRedoButtons();
+        }
+
+        // Add element or constant
+        function addElement() {
+            const ddl = document.getElementById("ddlElement");
+            const element = ddl.value;
+
+            // Nothing selected
+            if (element === "") {
+                alert("Please select an element");
+                return;
+            }
+
+            addText(element);
+
+            // Reset dropdown
+            ddl.selectedIndex = 0;
+            invalidateFormula();
+        }
+
+        function addconstant() {
+            const txtConst = document.getElementById("txtConst");
+
+
+            const constant = txtConst.value.trim();
+
+
+            if (constant === "") {
+                alert("Please enter a constant");
+                return;
+            }
+
+            // Validate constant if entered
+            if (constant !== "" && isNaN(constant)) {
+                alert("Constant must be numeric");
+                txtConst.focus();
+                return;
+            }
+
+            if (constant !== "") {
+                addText(constant);
+            }
+
+            txtConst.value = "";
+
+            invalidateFormula();
+
+        }
+
+        function addBool() {
+            const ddl = document.getElementById("ddlBool");
+            const boolValue = ddl.value;
+
+            // Nothing selected
+            if (boolValue === "") {
+                alert("Please select a Bool value");
+                return;
+            }
+
+            addText(boolValue.toLowerCase());
+
+            // Reset dropdown
+            ddl.selectedIndex = 0;
+
+            invalidateFormula();
+        }
+
+        function formatFormula(formula) {
+            if (!formula) return "";
+
+            // Normalize newlines
+            formula = formula.replace(/\r?\n|\r/g, " ");
+
+            // ---------------- PROTECT MULTI-CHAR OPERATORS ----------------
+            formula = formula
+                .replace(/&&/g, "__AND__")
+                .replace(/\|\|/g, "__OR__")
+                .replace(/<=/g, "__LE__")
+                .replace(/>=/g, "__GE__")
+                .replace(/==/g, "__EQ__")
+                .replace(/=/g, "__EQ1__");
+
+
+            // ---------------- SPACE SINGLE-CHAR OPERATORS ----------------
+            formula = formula.replace(/([+\-*/?:,<>{}\[\],])/g, " $1 ");
+
+            // ---------------- RESTORE MULTI-CHAR OPERATORS ----------------
+            formula = formula
+                .replace(/__AND__/g, " && ")
+                .replace(/__OR__/g, " || ")
+                .replace(/__LE__/g, " <= ")
+                .replace(/__GE__/g, " >= ")
+                .replace(/__EQ__/g, " == ")
+                .replace(/__EQ1__/g, " = ");
+
+            // ---------------- FIX BRACKET COMBINATIONS ----------------
+            formula = formula
+                .replace(/\(\s+\(/g, "((")
+                .replace(/\)\s+\)/g, "))")
+                .replace(/\{\s+\{/g, "{{")
+                .replace(/\}\s+\}/g, "}}")
+                .replace(/\[\s+\[/g, "[[")
+                .replace(/\]\s+\]/g, "]]")
+
+                .replace(/\(\s+\{/g, "({")
+                .replace(/\{\s+\(/g, "{(")
+                .replace(/\)\s+\}/g, ")}")
+                .replace(/\}\s+\)/g, "})")
+                .replace(/\[\s+\(/g, "[(")
+                .replace(/\(\s+\[/g, "([")
+                .replace(/\)\s+\]/g, ")]")
+                .replace(/\]\s+\)/g, "])")
+                .replace(/\}\s+\]/g, "}]")
+                .replace(/\]\s+\}/g, "]}");
+
+            // ---------------- SPACE BETWEEN BRACKETS & WORDS ----------------
+            formula = formula.replace(/([\(\{\[])([A-Za-z0-9_])/g, "$1 $2");
+            formula = formula.replace(/([A-Za-z0-9_])([\)\}\]])/g, "$1 $2");
+
+            // ---------------- NORMALIZE SPACES ----------------
+            formula = formula.replace(/\s+/g, " ").trim();
+
+            // ---------------- KEYWORDS ----------------
+            formula = formula.replace(
+                /\b(case|when|then|else|end)\b/gi,
+                m => m.toUpperCase()
+            );
+
+            formula = formula.replace(
+                /\b(true|false)\b/gi,
+                m => m.toLowerCase()
+            );
+
+            return formula;
+        }
+
+        // Formula validation
+        function validateFormula() {
+
+            let formula = formulaEditor.getValue().trim();
+            const formulaName = document.getElementById("FormulaName").value.trim();
+
+            if (formulaName === "") {
+                alert("Formula name is required");
+                return;
+            }
+
+            if (formula === "") {
+                alert("Formula body cannot be empty");
+                return;
+            }
+
+             // whitespace
+            formula = formula.replace(/\r?\n|\r/g, " ");
+            formula = formula.replace(/\s+/g, " ").trim();
+
+             // Invalid characters
+            const invalidCharPattern = /[^A-Za-z0-9_+\-*/()<>=?:.,&\s|]/;
+             if (invalidCharPattern.test(formula)) {
+                 alert("Formula contains invalid characters");
+                 return;
+             }
+
+             // Starts or ends with operator
+            if (/^[+\-*/<>=?:,&]/.test(formula) || /[+\-*/<>=?:,&]$/.test(formula)) {
+                alert("Formula cannot start or end with an operator");
+                return;
+            }
+
+             // Empty parentheses
+            if (/\(\s*\)/.test(formula)) {
+                alert("Empty parentheses are not allowed");
+                return;
+            }
+
+            // Parenthesis balance
+            let stack = [];
+            for (let c of formula) {
+                if (c === "(") stack.push(c);
+                if (c === ")" && !stack.pop()) {
+                    alert("Unmatched closing parenthesis");
+                    return;
+                }
+            }
+            if (stack.length) {
+                alert("Unmatched opening parenthesis");
+                return;
+            }
+
+            // ---------- TERNARY VALIDATION ----------
+            const qCount = (formula.match(/\?/g) || []).length;
+            const cCount = (formula.match(/:/g) || []).length;
+
+            if (qCount !== cCount) {
+                alert("Each '?' must have a matching ':'");
+                return;
+            }
+
+            let balance = 0;
+            for (let ch of formula) {
+                if (ch === '?') balance++;
+                if (ch === ':') balance--;
+                if (balance < 0) {
+                    alert("Invalid ternary operator order");
+                    return;
+                }
+            }
+
+             // ---------- LOGICAL OPERATOR VALIDATION ----------
+
+             // Single & or | is NOT allowed
+             if (/(^|[^&])&([^&]|$)/.test(formula)) {
+                 alert("Use && instead of single &");
+                 return;
+             }
+
+             if (/(^|[^|])\|([^|]|$)/.test(formula)) {
+                 alert("Use || instead of single |");
+                 return;
+             }
+
+             // More than two & or |
+             if (/&&&+/.test(formula) || /\|\|\|+/.test(formula)) {
+                 alert("Invalid logical operator sequence");
+                 return;
+             }
+
+
+             // Invalid operator sequences
+             const invalidOperatorPatterns = [
+                 /\+\+/,
+                 /--/,
+                 /\*\*/,
+                 /\/\//,
+                 /\?\?/,
+                 /::/,
+                 /====+/,
+                 /!==/,
+                 /<=</,
+                 />=>/,
+                 /&&\s*&&/,
+                 /\|\|\s*\|\|/
+             ];
+
+             for (let pattern of invalidOperatorPatterns) {
+                 if (pattern.test(formula)) {
+                     alert("Invalid operator sequence detected");
+                     return;
+                 }
+             }
+
+
+            // ---------- INVALID STANDALONE KEYWORDS ----------
+            const standaloneKeywords = /^(CASE|WHEN|THEN|ELSE|END)$/i;
+
+            if (standaloneKeywords.test(formula)) {
+                alert("Incomplete formula. Keywords like CASE / ELSE cannot be used alone.");
+                return;
+            }
+
+            // ---------------- CASE VALIDATION ----------------
+
+            const caseTokens = formula.match(/\b(CASE|WHEN|THEN|ELSE|END)\b/g) || [];
+
+            if (caseTokens.length > 0) {
+
+                // CASE must start with CASE
+                if (!/^CASE\b/.test(formula)) {
+                    alert("CASE expression must start with CASE");
+                    return;
+                }
+
+                // CASE must end with END
+                if (!/\bEND$/.test(formula)) {
+                    alert("CASE expression must end with END");
+                    return;
+                }
+
+                const caseCount = (formula.match(/\bCASE\b/g) || []).length;
+                const endCount = (formula.match(/\bEND\b/g) || []).length;
+
+                if (caseCount !== endCount) {
+                    alert("CASE and END count mismatch");
+                    return;
+                }
+
+                // CASE must have at least one WHEN ... THEN
+                if (!/\bWHEN\b[\s\S]+?\bTHEN\b/.test(formula)) {
+                    alert("CASE must contain at least one WHEN ... THEN block");
+                    return;
+                }
+
+                // THEN must have an expression
+                if (/\bTHEN\b\s*(WHEN|ELSE|END)\b/.test(formula)) {
+                    alert("THEN must be followed by an expression");
+                    return;
+                }
+
+                // ELSE must have an expression
+                if (/\bELSE\b\s*END\b/.test(formula)) {
+                    alert("ELSE must be followed by a value");
+                    return;
+                }
+
+                // WHEN must have a condition
+                if (/\bWHEN\b\s*(THEN|ELSE|END)\b/.test(formula)) {
+                    alert("WHEN must have a condition");
+                    return;
+                }
+            }
+
+            // ---------- MUST CONTAIN A REAL EXPRESSION ----------
+            const meaningfulTokenPattern =
+                /\b[A-Za-z_][A-Za-z0-9_]*\b|\d+|true|false|\+|\-|\*|\/|>|<|==|\?|:/i;
+
+            if (!meaningfulTokenPattern.test(formula)) {
+                alert("Formula does not contain a valid expression");
+                return;
+            }
+
+
+             // Math functions
+            const mathCalls = formula.match(/Math\.(Min|Max)\s*\(/g) || [];
+
+            for (let call of mathCalls) {
+                const fn = call.includes("Min") ? "Min" : "Max";
+                const regex = new RegExp(
+                    `Math\\.${fn}\\s*\\([^,]+,\\s*[^)]+\\)`
+                );
+                if (!regex.test(formula)) {
+                    alert(`Math.${fn} requires exactly two parameters`);
+                    return;
+                }
+            }
+
+
+            $.ajax({
+                url: '@Url.Action("ValidateFormula", "Formula")',
+                type: 'POST',
+                data: { formula: formula },
+                success: function (res) {
+                    if (res.IsValid) {
+
+                        alert("Formula validated successfully");
+
+                        isFormulaValidated = true;
+                        lastValidatedFormula = formula;
+                        document.getElementById("btnSave").disabled = false;
+                        document.getElementById("btntest").disabled = false;
+                    } else {
+                        alert("Formula Error: " + res.ErrorMessage);
+                    }
+                },
+                error: function () {
+                    alert("Server validation failed");
+                }
+            });
+        }
+
+        function addFunctionWithCursor(fnText, cursorOffsetFromEnd) {
+            if (!formulaEditor) return;
+
+            formulaEditor.focus();
+
+            const doc = formulaEditor.getDoc();
+            const cursor = doc.getCursor();
+
+            doc.replaceRange(fnText, cursor);
+
+            const newCursor = {
+                line: cursor.line,
+                ch: cursor.ch + fnText.length - cursorOffsetFromEnd
+            };
+
+            doc.setCursor(newCursor);
+
+            invalidateFormula();
+        }
+
+        function enableReplaceAll() {
+            const btn = document.getElementById("btnReplaceAll");
+            if (btn) btn.disabled = false;
+        }
+
+        function openReplaceModal() {
+
+            if (!formulaEditor || !formulaEditor.getValue().trim()) {
+                alert("Formula body is empty. Please enter a formula before using Replace All.");
+                return;
+            }
+
+            const ddl = document.getElementById("invalidElementSelect");
+            ddl.innerHTML = "";
+
+            invalidTokenSet.forEach(word => {
+                ddl.innerHTML += `<option value="${word}">${word}</option>`;
+            });
+
+            document.getElementById("replaceMode").value = "";
+            document.getElementById("replaceType").value = "";
+            document.getElementById("replaceValueContainer").innerHTML = "";
+            document.getElementById("invalidElementContainer").style.display = "none";
+            document.getElementById("customReplaceTarget").value = "";
+            document.getElementById("customTargetContainer").style.display = "none";
+
+            const modal = bootstrap.Modal.getOrCreateInstance(
+                document.getElementById("replaceModal")
+            );
+            modal.show();
+        }
+
+        function onReplaceModeChange() {
+
+            const mode = document.getElementById("replaceMode").value;
+
+            const invalidBox = document.getElementById("invalidElementContainer");
+            const customBox = document.getElementById("customTargetContainer");
+
+            if (mode === "invalid") {
+                invalidBox.style.display = "block";
+                customBox.style.display = "none";
+            }
+            else if (mode === "custom") {
+                invalidBox.style.display = "none";
+                customBox.style.display = "block";
+            }
+            else {
+                invalidBox.style.display = "none";
+                customBox.style.display = "none";
+            }
+
+            // reset dependent fields
+            document.getElementById("replaceType").value = "";
+            document.getElementById("replaceValueContainer").innerHTML = "";
+        }
+
+        function onReplaceTypeChange() {
+
+            const type = document.getElementById("replaceType").value;
+            const container = document.getElementById("replaceValueContainer");
+
+            container.innerHTML = "";
+
+            if (type === "element") {
+                container.innerHTML = `
+            <label class="fw-semibold">Select Element</label>
+            <select id="replaceValue" class="form-control">
+                ${Object.keys(elementMap)
+                        .map(k => `<option value="${k}">${elementMap[k]} (${k})</option>`)
+                        .join("")}
+            </select>`;
+            }
+
+            else if (type === "bool") {
+                container.innerHTML = `
+            <label class="fw-semibold">Select Boolean</label>
+            <select id="replaceValue" class="form-control">
+                <option value="true">true</option>
+                <option value="false">false</option>
+            </select>`;
+            }
+
+            else if (type === "constant") {
+                container.innerHTML = `
+            <label class="fw-semibold">Enter Constant</label>
+            <input type="number" id="replaceValue" class="form-control">
+        `;
+            }
+
+        }
+
+        function replaceAllInvalid() {
+
+            const mode = document.getElementById("replaceMode").value;
+            const type = document.getElementById("replaceType").value;
+            const input = document.getElementById("replaceValue");
+
+            if (!mode || !type || !input) {
+                alert("Please complete replacement options");
+                return;
+            }
+
+            const replacement = input.value;
+            if (!replacement) {
+                alert("Replacement value cannot be empty");
+                return;
+            }
+
+            const doc = formulaEditor.getDoc();
+            let text = doc.getValue();
+            let target = "";
+
+            // ---------- MODE: INVALID ELEMENT ----------
+            if (mode === "invalid") {
+
+                target = document.getElementById("invalidElementSelect").value;
+                if (!target) {
+                    alert("Select invalid element");
+                    return;
+                }
+            }
+
+            // ---------- MODE: REPLACE TO ANOTHER ----------
+            if (mode === "custom") {
+
+                const customInput = document.getElementById("customReplaceTarget");
+
+                if (!customInput || !customInput.value.trim()) {
+                    alert("Please enter the value to replace");
+                    return;
+                }
+
+                target = customInput.value.trim();
+            }
+
+
+            function escapeRegex(val) {
+                return val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+
+            const operatorPattern = /^[+\-*/<>=?:&|!]+$/;
+
+            let regex;
+
+            if (operatorPattern.test(target)) {
+                regex = new RegExp(escapeRegex(target), "g");
+            } else {
+                // Words / identifiers
+                regex = new RegExp("\\b" + escapeRegex(target) + "\\b", "g");
+            }
+
+            //const regex = new RegExp("\\b" + escapeRegex(target) + "\\b", "g");
+
+
+            if (!regex.test(text)) {
+                alert(`"${target}" does not exist in the current formula`);
+                return;
+            }
+
+            // Reset regex after test()
+            regex.lastIndex = 0;
+
+            // Replace
+            doc.setValue(text.replace(regex, replacement));
+
+            invalidateFormula();
+            highlightInvalidElements(formulaEditor);
+
+            bootstrap.Modal.getInstance(
+                document.getElementById("replaceModal")
+            ).hide();
+        }
+
+        function openTestFormula() {
+
+            if (!isFormulaValidated) {
+                alert("Please validate the formula before testing");
+                return;
+            }
+
+            if (formulaEditor.getValue().trim() !== lastValidatedFormula) {
+                alert("Formula has been modified. Please validate or formate again.");
+                invalidateFormula();
+                return;
+            }
+
+            const formula = formulaEditor.getValue();
+
+            if (!formula.trim()) {
+                alert("Formula is empty");
+                return;
+            }
+
+            // Extract identifiers
+            const tokens = formula.match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || [];
+
+            // Reserved words / functions
+            const reserved = new Set([
+                "CASE", "WHEN", "THEN", "ELSE", "END",
+                "IF", "MIN", "MAX", "MATH",
+                "TRUE", "FALSE"
+            ]);
+
+            const container = document.getElementById("testInputs");
+            container.innerHTML = "";
+
+            const added = new Set();
+
+            tokens.forEach(token => {
+
+                const key = token.toUpperCase();
+
+                // skip keywords, functions, booleans
+                if (reserved.has(key)) return;
+
+                // skip duplicates
+                if (added.has(key)) return;
+
+                added.add(key);
+                const displayName = elementMap[key] || token;
+                const type = elementTypeMap[key] || "number";
+
+                let inputControl = "";
+
+                if (type === "boolean") {
+                    inputControl = `
+                        <select class="form-control test-value"
+                                data-name="${token}"
+                                data-type="boolean">
+                            <option value="true">true</option>
+                            <option value="false">false</option>
+                        </select>
+                    `;
+                } else {
+                    inputControl = `
+                        <input type="number"
+                               class="form-control test-value"
+                               data-name="${token}"
+                               data-type="number">
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="mb-2 row align-items-center">
+                        <label class="col-md-4 fw-semibold">
+                            ${displayName}
+                            <small class="text-muted">(${token})</small>
+                        </label>
+                        <div class="col-md-6">
+                            ${inputControl}
+                        </div>
+                    </div>
+                `;
+
+            });
+
+            document.getElementById("testResult").classList.add("d-none");
+
+            new bootstrap.Modal(
+                document.getElementById("testFormulaModal")
+            ).show();
+        }
+
+        function runFormulaTest() {
+
+            const formula = formulaEditor.getValue();
+            const values = {};
+
+            document.querySelectorAll(".test-value").forEach(el => {
+
+                const name = el.dataset.name;
+                const type = el.dataset.type;
+
+                if (type === "boolean") {
+                    values[name] = el.value === "true";
+                } else {
+                    values[name] = parseFloat(el.value || 0);
+                }
+            });
+
+            $.ajax({
+                url: '@Url.Action("TestFormula", "Formula")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    formula: formula,
+                    values: values
+                }),
+                success: function (res) {
+                    const box = document.getElementById("testResult");
+                    box.classList.remove("d-none");
+                    box.innerHTML = `<strong>Result:</strong> ${res.Result}`;
+                },
+                error: function () {
+                    alert("Test failed");
+                }
+            });
+        }
+
+    </script>
+
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="brand">
+            <i class="fa-solid fa-calculator"></i> Mission Calculator
+        </div>
+
+        <a href="@Url.Action("Index", "Formula")">
+            <i class="fa fa-list me-2"></i> Formula Master
+        </a>
+
+        <a href="@Url.Action("Create", "Formula")">
+            <i class="fa fa-plus-circle me-2"></i> Create Formula
+        </a>
+
+        <a href="@Url.Action("Contact", "Home")">
+            <i class="fa fa-envelope me-2"></i> Support
+        </a>
+    </div>
+    <!-- Top Navbar -->
+    <div class="top-navbar">
+        <div class="page-title">
+            <i class="fa fa-layer-group"></i>
+            @ViewBag.Title
+        </div>
+
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+
+        <!-- Page Content -->
+        <div class="mt-3">
+            @RenderBody()
+        </div>
+
+        <!-- Footer -->
+        <div class="footer mt-4">
+            © @DateTime.Now.Year Mission Calculator
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    <script src="~/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+    @RenderSection("scripts", required: false)
+
+    <script src="~/Scripts/codemirror/codemirror.js"></script>
+    <script src="~/Scripts/codemirror/addon/edit/closebrackets.js"></script>
+    <script src="~/Scripts/codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="~/Scripts/codemirror/addon/selection/active-line.js"></script>
+    <script src="~/Scripts/codemirror/addon/search/searchcursor.js"></script>
+    <script src="~/Scripts/codemirror/addon/search/match-highlighter.js"></script>
+
+    <script src="~/Scripts/codemirror/mode/javascript/javascript.js"></script>
+    <script src="~/Scripts/codemirror/addon/hint/show-hint.js"></script>
+
+</body>
+
+</html>

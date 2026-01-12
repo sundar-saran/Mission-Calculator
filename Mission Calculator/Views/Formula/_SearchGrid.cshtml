@@ -1,0 +1,59 @@
+﻿@model FormulaUtility.Mvc.Models.FormulaDetailViewModel
+
+@{
+    Layout = null;
+}
+
+@if (Model != null && Model.FormulaList != null && Model.FormulaList.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:8%" class="text-center">Sr. No</th>
+                    <th>Formula Name</th>
+                    <th style="width:20%">Effective Date</th>
+                    <th style="width:15%" class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int index = 1;
+                }
+
+                @foreach (var item in Model.FormulaList)
+                {
+                    <tr>
+                        <td class="text-center">@index</td>
+                        <td>
+                            @item.FormulaName
+                        </td>
+                        <td>
+                            @item.EffectiveDate.ToString("dd-MMM-yyyy")
+                        </td>
+                        <td class="text-center">
+                            <a href="@Url.Action("Edit", new { id = item.FormulaId })"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    index++;
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Record Count -->
+    <div class="text-muted small mt-2">
+        Total Records: <strong>@Model.FormulaList.Count()</strong>
+    </div>
+}
+else
+{
+    <!-- Empty State -->
+    <div class="text-center text-muted p-4">
+        <i class="fa fa-circle-info fa-2x mb-2"></i>
+        <div>No formulas found.</div>
+    </div>
+}
