@@ -396,6 +396,8 @@
             // Normalize newlines
             formula = formula.replace(/\r?\n|\r/g, " ");
 
+            formula = formula.replace(/=\s*=/g, "==");
+
             // ---------------- PROTECT MULTI-CHAR OPERATORS ----------------
             formula = formula
                 .replace(/&&/g, "__AND__")
@@ -404,7 +406,6 @@
                 .replace(/>=/g, "__GE__")
                 .replace(/==/g, "__EQ__")
                 .replace(/=/g, "__EQ1__");
-
 
             // ---------------- SPACE SINGLE-CHAR OPERATORS ----------------
             formula = formula.replace(/([+\-*/?:,<>{}\[\],])/g, " $1 ");
