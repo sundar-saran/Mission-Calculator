@@ -720,6 +720,7 @@
     <Content Include="Views\Formula\_SearchGrid.cshtml" />
     <Content Include="Views\Formula\Create.cshtml" />
     <Content Include="Views\Formula\Edit.cshtml" />
+    <Content Include="Views\Shared\_LayoutForTemplete.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
